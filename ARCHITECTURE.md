@@ -1,140 +1,275 @@
-# Three-Tier Application Monitoring Using AWS CloudWatch
+# Three-Tier Application Monitoring Architecture
 
-## 📌 Project Overview
+## 📌 Overview
 
-This project focuses on monitoring a Dockerized three-tier application deployed on Amazon ECS using AWS CloudWatch.
+This document describes the architecture of the three-tier application and the AWS CloudWatch monitoring layer implemented for the deployment.
 
-The application consists of three services:
+The application follows a three-tier architecture consisting of:
 
-- Frontend – Nginx
-- Backend – Node.js / Express
-- Database – MongoDB
+1. Frontend
+2. Backend
+3. Database
 
-The monitoring layer uses Amazon CloudWatch to collect and visualize ECS metrics, monitor application logs, configure CPU utilization alarms, and send notifications through Amazon SNS.
-
-The objective of this project is to provide centralized monitoring, logging, visualization, and alerting for the deployed three-tier application.
+The application is deployed using Amazon ECS with AWS Fargate, while AWS CloudWatch is used for monitoring metrics, logs, dashboards, and alarms.
 
 ---
 
 ## 🏗️ Application Architecture
 
-    User / Browser
-          │
-          ▼
-    ┌───────────────────────┐
-    │ Frontend - Nginx      │
-    │ ECS Fargate           │
-    │ Port 80               │
-    └───────────┬───────────┘
-                │
-                ▼
-    ┌───────────────────────┐
-    │ Backend - Node.js     │
-    │ ECS Fargate           │
-    │ Port 5000             │
-    └───────────┬───────────┘
-                │
-                ▼
-    ┌───────────────────────┐
-    │ MongoDB               │
-    │ ECS Fargate           │
-    │ Port 27017            │
-    └───────────────────────┘
+    ┌──────────────────────────────┐
+    │        User / Browser        │
+    └──────────────┬───────────────┘
+                   │
+                   │ HTTP
+                   ▼
+    ┌──────────────────────────────┐
+    │     Frontend - Nginx         │
+    │                              │
+    │     ECS Fargate              │
+    │     Port: 80                 │
+    └──────────────┬───────────────┘
+                   │
+                   │ API Requests
+                   ▼
+    ┌──────────────────────────────┐
+    │     Backend - Node.js        │
+    │                              │
+    │     ECS Fargate              │
+    │     Port: 5000               │
+    └──────────────┬───────────────┘
+                   │
+                   │ MongoDB Connection
+                   ▼
+    ┌──────────────────────────────┐
+    │        MongoDB               │
+    │                              │
+    │     ECS Fargate              │
+    │     Port: 27017              │
+    └──────────────────────────────┘
 
-              AWS CloudWatch
+---
+
+## ☁️ AWS Infrastructure
+
+The application runs inside an Amazon ECS cluster:
+
+    ECS Cluster
+    └── three-tier-cluster
+        │
+        ├── three-tier-frontend-service
+        │
+        ├── three-tier-backend-service
+        │
+        └── three-tier-mongodb-service-2
+
+All three services use AWS Fargate as the compute platform.
+
+---
+
+## 🔎 Service Discovery
+
+AWS Cloud Map is used for service discovery between the ECS services.
+
+The private namespace is:
+
+    three-tier.local
+
+The registered services include:
+
+    backend.three-tier.local
+    mongodb.three-tier.local
+
+The backend uses the MongoDB service name to connect to the database.
+
+The backend MongoDB connection is configured as:
+
+    mongodb://mongodb.three-tier.local:27017/todoDB
+
+This allows the backend service to communicate with MongoDB without depending on a fixed IP address.
+
+---
+
+## 📊 CloudWatch Monitoring Architecture
+
+AWS CloudWatch provides the monitoring layer for the application.
+
+    ┌─────────────────────────────────────────┐
+    │          Three-Tier Application          │
+    │                                         │
+    │  Frontend    Backend       MongoDB      │
+    └──────┬─────────┬─────────────┬──────────┘
+           │         │             │
+           │         │             │
+           ▼         ▼             ▼
+    ┌─────────────────────────────────────────┐
+    │          Amazon CloudWatch              │
+    │                                         │
+    │  • ECS Metrics                          │
+    │  • CloudWatch Logs                      │
+    │  • CloudWatch Dashboard                 │
+    │  • CloudWatch Alarms                    │
+    └───────────────┬─────────────────────────┘
                     │
-       ┌────────────┼────────────┐
-       │            │            │
-       ▼            ▼            ▼
-     ECS         CloudWatch   CloudWatch
-   Metrics         Logs        Alarms
-       │            │            │
-       │            │            ▼
-       │            │       Amazon SNS
-       │            │            │
-       │            │            ▼
-       │            │       Email Alert
-       │            │
-       └────────────┴────────────┐
-                                 ▼
-                    CloudWatch Dashboard
+                    ▼
+             ┌──────────────┐
+             │ Amazon SNS   │
+             └──────┬───────┘
+                    │
+                    ▼
+              Email Alert
 
 ---
 
-## ☁️ AWS Services Used
+## 📈 Metrics Monitoring
 
-| Service | Purpose |
-|---|---|
-| Amazon ECS | Container orchestration |
-| AWS Fargate | Serverless container execution |
-| Amazon ECR | Container image storage |
-| Amazon CloudWatch | Metrics, logs, dashboard and alarms |
-| Amazon SNS | Monitoring notifications |
-| AWS Cloud Map | Service discovery |
-| IAM | Access control and permissions |
+CloudWatch collects ECS service-level metrics for the application.
 
----
-
-## 🐳 Application Stack
+The dashboard monitors:
 
 ### Frontend
 
-- Nginx
-- HTML
-- JavaScript
-- Docker
-- Amazon ECS / Fargate
+    three-tier-frontend-service
 
-### Backend
-
-- Node.js
-- Express.js
-- Mongoose
-- Docker
-- Amazon ECS / Fargate
-
-### Database
-
-- MongoDB
-- Docker
-- Amazon ECS / Fargate
-
----
-
-## 📊 CloudWatch Monitoring
-
-A dedicated CloudWatch dashboard named **Three-Tier-App-Monitoring** was created to provide a centralized view of the application.
-
-The dashboard monitors the following ECS services:
-
-- `three-tier-frontend-service`
-- `three-tier-backend-service`
-- `three-tier-mongodb-service-2`
-
-### Metrics Monitored
-
-For each ECS service, the dashboard monitors:
+Metrics:
 
 - CPUUtilization
 - MemoryUtilization
 - LiveTaskCount
 
-These metrics provide visibility into:
+### Backend
 
-- CPU consumption
-- Memory usage
-- Running task count
-- Overall ECS service health
+    three-tier-backend-service
+
+Metrics:
+
+- CPUUtilization
+- MemoryUtilization
+- LiveTaskCount
+
+### MongoDB
+
+    three-tier-mongodb-service-2
+
+Metrics:
+
+- CPUUtilization
+- MemoryUtilization
+- LiveTaskCount
+
+These metrics are combined into the CloudWatch dashboard:
+
+    Three-Tier-App-Monitoring
 
 ---
 
-## 📈 CloudWatch Dashboard
+## 📋 Log Monitoring Architecture
 
-The monitoring dashboard contains the following components.
+The backend container is configured to send logs to Amazon CloudWatch Logs using the `awslogs` log driver.
+
+    Backend Container
+          │
+          │ awslogs
+          ▼
+    CloudWatch Log Group
+          │
+          ▼
+    /ecs/three-tier-backend
+          │
+          ▼
+    ECS Log Streams
+          │
+          ▼
+    CloudWatch Dashboard
+
+The backend logs include important application events such as:
+
+    Backend API running on port 5000
+
+and:
+
+    Connected to MongoDB successfully!
+
+---
+
+## 🚨 Alarm Architecture
+
+Three CPU utilization alarms were configured.
+
+    ┌─────────────────────────────┐
+    │ ECS CPUUtilization Metrics  │
+    └──────────────┬──────────────┘
+                   │
+                   ▼
+          ┌─────────────────┐
+          │ CloudWatch      │
+          │ Alarm           │
+          └────────┬────────┘
+                   │
+             CPU > 70%
+                   │
+                   ▼
+          ┌─────────────────┐
+          │ Amazon SNS      │
+          │ Notification    │
+          └────────┬────────┘
+                   │
+                   ▼
+              Email Alert
+
+Configured alarms:
+
+    Backend-CPU-High
+    Frontend-CPU-High
+    MongoDB-CPU-High
+
+Each alarm monitors CPU utilization above 70% for the configured evaluation period of 5 minutes.
+
+---
+
+## 📧 Notification Flow
+
+The notification architecture is:
+
+    ECS Service
+         │
+         ▼
+    CPUUtilization Metric
+         │
+         ▼
+    CloudWatch Alarm
+         │
+         │ Threshold exceeded
+         ▼
+    SNS Topic
+         │
+         ▼
+    ThreeTierMonitoringAlerts
+         │
+         ▼
+    Confirmed Email Subscription
+         │
+         ▼
+    Email Notification
+
+The SNS topic used for monitoring alerts is:
+
+    ThreeTierMonitoringAlerts
+
+---
+
+## 📊 Monitoring Dashboard Architecture
+
+The CloudWatch dashboard provides a centralized monitoring view.
+
+Dashboard name:
+
+    Three-Tier-App-Monitoring
+
+The dashboard contains:
 
 ### ECS Overall Resource Monitoring
 
-A combined graph displaying:
+Displays:
 
 - Frontend CPU utilization
 - Frontend memory utilization
@@ -148,290 +283,99 @@ A combined graph displaying:
 
 ### Alarm Status Overview
 
-The dashboard displays the current state of all configured CPU utilization alarms.
+Displays the status of:
 
-### Backend Log Monitoring
+- Backend-CPU-High
+- Frontend-CPU-High
+- MongoDB-CPU-High
 
-The dashboard also includes a CloudWatch Logs widget for:
+### Backend Logs
 
-    /ecs/three-tier-backend
-
-This provides quick visibility into backend application logs.
-
----
-
-## 🚨 CloudWatch Alarms
-
-Three CPU utilization alarms were configured.
-
-### Backend CPU Alarm
-
-    Alarm Name: Backend-CPU-High
-    Metric: CPUUtilization
-    Condition: CPUUtilization > 70%
-    Evaluation Period: 5 minutes
-
-### Frontend CPU Alarm
-
-    Alarm Name: Frontend-CPU-High
-    Metric: CPUUtilization
-    Condition: CPUUtilization > 70%
-    Evaluation Period: 5 minutes
-
-### MongoDB CPU Alarm
-
-    Alarm Name: MongoDB-CPU-High
-    Metric: CPUUtilization
-    Condition: CPUUtilization > 70%
-    Evaluation Period: 5 minutes
-
-All three alarms are connected to the monitoring notification system.
-
----
-
-## 📧 Amazon SNS Notifications
-
-An Amazon SNS topic was created for monitoring alerts:
-
-    ThreeTierMonitoringAlerts
-
-The topic is used by CloudWatch alarms to send notifications when an alarm enters the `In alarm` state.
-
-An email subscription was configured and confirmed successfully.
-
-### Alert Flow
-
-    ECS CPU Metric
-          ↓
-    CloudWatch Alarm
-          ↓
-      CPU > 70%
-          ↓
-      Amazon SNS
-          ↓
-      Email Alert
-
----
-
-## 📋 CloudWatch Logs
-
-Backend container logs are configured using the AWS `awslogs` log driver.
-
-### Log Group
+Displays recent events from:
 
     /ecs/three-tier-backend
 
-### Region
+---
 
-    us-east-1
+## 🔄 Complete Monitoring Flow
 
-### Stream Prefix
+The complete architecture can be represented as:
 
-    ecs
-
-The logs include application startup and database connection information.
-
-Example log messages:
-
-    Backend API running on port 5000
-    Connected to MongoDB successfully!
+    User
+     │
+     ▼
+    Nginx Frontend
+     │
+     ▼
+    Node.js Backend
+     │
+     ▼
+    MongoDB
+     
+     │
+     │ ECS Metrics
+     ▼
+    CloudWatch
+     │
+     ├──────────────► Dashboard
+     │
+     ├──────────────► Logs
+     │
+     └──────────────► Alarms
+                         │
+                         ▼
+                    Amazon SNS
+                         │
+                         ▼
+                    Email Alert
 
 ---
 
-## 🔧 ECS Configuration
+## 🔐 Security and Access
 
-The backend ECS service is deployed using:
+The application services run within the AWS networking environment using ECS task networking.
 
-    Cluster:
-    three-tier-cluster
+AWS IAM controls access to AWS resources.
 
-    Service:
-    three-tier-backend-service
+CloudWatch receives metrics and logs from the ECS deployment through the configured ECS and task execution configuration.
 
-    Task Definition:
-    three-tier-backend
-
-    Revision:
-    5
-
-    Launch Type:
-    AWS Fargate
-
-The backend service was successfully deployed with:
-
-    1 Desired Task
-    1 Running Task
-    0 Pending Tasks
-    Deployment Status: Success
+The monitoring setup does not require direct access to the application containers for normal metric and log collection.
 
 ---
 
-## 🔍 Monitoring Workflow
+## 🎯 Architecture Benefits
 
-The monitoring workflow implemented in this project is:
+This monitoring architecture provides:
 
-    Application
-         ↓
-    ECS Fargate Services
-         ↓
-    CloudWatch Metrics
-         ↓
-    CloudWatch Dashboard
-         ↓
-    CPU Utilization Monitoring
-         ↓
-    CloudWatch Alarms
-         ↓
-    Amazon SNS
-         ↓
-    Email Notification
-
-Application logs follow a separate monitoring path:
-
-    ECS Backend Container
-         ↓
-    CloudWatch Logs
-         ↓
-    /ecs/three-tier-backend
-         ↓
-    Log Streams
-         ↓
-    Dashboard Log Widget
+- Centralized ECS monitoring
+- Real-time resource visibility
+- Application log collection
+- CPU utilization monitoring
+- Automated threshold-based alerts
+- Email notifications
+- Service health visibility
+- Easier troubleshooting
+- Centralized operational dashboard
 
 ---
 
-## 🧪 Testing and Verification
+## 📌 Final Architecture Summary
 
-The deployed application was tested by performing application operations through the live frontend.
+The project combines a Dockerized three-tier application with AWS observability services.
 
-The following were verified:
+The application runs as three ECS Fargate services:
 
-- Application loads successfully
-- New task can be added
-- Task can be completed
-- Data persists after page refresh
-- Backend API is running
-- Backend successfully connects to MongoDB
-- CloudWatch metrics are receiving data
-- CloudWatch logs are being generated
-- CPU alarms are active
-- Backend CPU alarm is in the `OK` state
-- Frontend CPU alarm is in the `OK` state
-- MongoDB CPU alarm is in the `OK` state
-- SNS email subscription is confirmed
+    Frontend → Backend → MongoDB
 
----
+AWS CloudWatch provides:
 
-## 📸 Project Screenshots
+    Metrics
+    Logs
+    Dashboard
+    Alarms
 
-All monitoring evidence is available in the `screenshots/` directory.
+Amazon SNS provides:
 
-### CloudWatch Dashboard
+    Email Notifications
 
-[CloudWatch Monitoring Dashboard](screenshots/01-cloudwatch-dashboard.png)
-
-### Logs and Alarms
-
-[Backend CloudWatch Logs](screenshots/02-backend-cloudwatch-logs.png)
-
-[CloudWatch Alarms](screenshots/03-cloudwatch-alarms.png)
-
-[Backend CPU Alarm](screenshots/04-backend-alarm-details.png)
-
-[Frontend CPU Alarm](screenshots/05-frontend-alarm-details.png)
-
-[MongoDB CPU Alarm](screenshots/06-mongodb-alarm-details.png)
-
-### Notifications
-
-[SNS Monitoring Notification](screenshots/07-sns-notification.png)
-
-### ECS Configuration
-
-[Backend ECS Deployment](screenshots/08-backend-cloudwatch-deployment.png)
-
-[ECS CloudWatch Logging Configuration](screenshots/09-ecs-cloudwatch-logging-config.png)
-
-[ECS Cluster Overview](screenshots/11-ecs-cluster-overview.png)
-
-### Application
-
-[Live Application Test](screenshots/10-live-application-test.png)
-
-### CloudWatch Log Group
-
-[CloudWatch Log Group](screenshots/12-cloudwatch-log-group.png)
-
----
-
-## 📁 Repository Structure
-
-    three-tier-cloudwatch-monitoring/
-    │
-    ├── screenshots/
-    │   ├── 01-cloudwatch-dashboard.png
-    │   ├── 02-backend-cloudwatch-logs.png
-    │   ├── 03-cloudwatch-alarms.png
-    │   ├── 04-backend-alarm-details.png
-    │   ├── 05-frontend-alarm-details.png
-    │   ├── 06-mongodb-alarm-details.png
-    │   ├── 07-sns-notification.png
-    │   ├── 08-backend-cloudwatch-deployment.png
-    │   ├── 09-ecs-cloudwatch-logging-config.png
-    │   ├── 10-live-application-test.png
-    │   ├── 11-ecs-cluster-overview.png
-    │   └── 12-cloudwatch-log-group.png
-    │
-    ├── README.md
-    ├── ARCHITECTURE.md
-    ├── MONITORING.md
-    ├── ALARMS.md
-    ├── SETUP.md
-    ├── TESTING.md
-    ├── TROUBLESHOOTING.md
-    └── CLEANUP.md
-
----
-
-## 🎯 Project Objectives
-
-The main objectives of this project are:
-
-1. Monitor a deployed three-tier application using AWS CloudWatch.
-2. Visualize ECS resource utilization through a centralized dashboard.
-3. Collect and analyze backend application logs.
-4. Configure CPU utilization alarms for application services.
-5. Configure SNS-based email notifications.
-6. Verify application health through monitoring data.
-7. Understand practical AWS observability and monitoring workflows.
-
----
-
-## ✅ Project Outcome
-
-The three-tier application was successfully monitored using AWS CloudWatch.
-
-The project demonstrates:
-
-- ECS service monitoring
-- Fargate resource monitoring
-- CloudWatch metrics
-- CloudWatch dashboards
-- CloudWatch Logs
-- CloudWatch alarms
-- Amazon SNS notifications
-- Application health verification
-
-The final monitoring setup provides a centralized way to observe the health and resource utilization of the three-tier application and receive alerts when CPU utilization exceeds the configured threshold.
-
----
-
-## 👩‍💻 Author
-
-**Shreyaa9**
-
-GitHub:  
-https://github.com/Shreyaa9
-
-Repository:  
-https://github.com/Shreyaa9/three-tier-cloudwatch-monitoring
+This architecture provides a centralized monitoring solution for observing the health and resource utilization of the deployed three-tier application.
