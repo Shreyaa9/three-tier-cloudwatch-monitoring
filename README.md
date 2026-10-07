@@ -81,8 +81,8 @@ The three tiers are deployed as separate containers using Amazon ECS Fargate.
 The deployed application is monitored using Amazon CloudWatch.
 
     ┌──────────────────────────────┐
-    │        ECS Fargate          │
-    │       Three-Tier App        │
+    │        ECS Fargate           │
+    │       Three-Tier App         │
     └──────────────┬───────────────┘
                    │
          ┌─────────┼─────────┐
