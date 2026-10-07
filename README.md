@@ -18,29 +18,37 @@ The objective of this project is to provide centralized monitoring, logging, vis
 
 ## 🏗️ Application Architecture
 
-    User / Browser
-          │
-          ▼
-    ┌───────────────────────┐
-    │ Frontend - Nginx      │
-    │ ECS Fargate           │
-    │ Port 80               │
-    └───────────┬───────────┘
-                │
-                ▼
-    ┌───────────────────────┐
-    │ Backend - Node.js     │
-    │ ECS Fargate           │
-    │ Port 5000             │
-    └───────────┬───────────┘
-                │
-                ▼
-    ┌───────────────────────┐
-    │ MongoDB               │
-    │ ECS Fargate           │
-    │ Port 27017            │
-    └───────────────────────┘
+The application follows a three-tier architecture consisting of a frontend, backend, and database layer.
 
+```text
+                         ┌──────────────────────┐
+                         │        User          │
+                         │     Web Browser      │
+                         └──────────┬───────────┘
+                                    │
+                                    │ HTTP Request
+                                    ▼
+                         ┌──────────────────────┐
+                         │    Frontend Tier     │
+                         │    Nginx Container   │
+                         │      Port 80         │
+                         └──────────┬───────────┘
+                                    │
+                                    │ /api/tasks
+                                    ▼
+                         ┌──────────────────────┐
+                         │     Backend Tier     │
+                         │   Node.js / Express  │
+                         │      Port 5000       │
+                         └──────────┬───────────┘
+                                    │
+                                    │ MongoDB Connection
+                                    ▼
+                         ┌──────────────────────┐
+                         │    Database Tier     │
+                         │   MongoDB Container  │
+                         │      Port 27017      │
+                         └──────────────────────┘
               AWS CloudWatch
                     │
        ┌────────────┼────────────┐
