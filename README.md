@@ -20,52 +20,111 @@ The objective of this project is to provide centralized monitoring, logging, vis
 
 The application follows a three-tier architecture consisting of a frontend, backend, and database layer.
 
-```text
-                         ┌──────────────────────┐
-                         │        User          │
-                         │     Web Browser      │
-                         └──────────┬───────────┘
-                                    │
-                                    │ HTTP Request
-                                    ▼
-                         ┌──────────────────────┐
-                         │    Frontend Tier     │
-                         │    Nginx Container   │
-                         │      Port 80         │
-                         └──────────┬───────────┘
-                                    │
-                                    │ /api/tasks
-                                    ▼
-                         ┌──────────────────────┐
-                         │     Backend Tier     │
-                         │   Node.js / Express  │
-                         │      Port 5000       │
-                         └──────────┬───────────┘
-                                    │
-                                    │ MongoDB Connection
-                                    ▼
-                         ┌──────────────────────┐
-                         │    Database Tier     │
-                         │   MongoDB Container  │
-                         │      Port 27017      │
-                         └──────────────────────┘
-              AWS CloudWatch
-                    │
-       ┌────────────┼────────────┐
-       │            │            │
-       ▼            ▼            ▼
-     ECS         CloudWatch   CloudWatch
-   Metrics         Logs        Alarms
-       │            │            │
-       │            │            ▼
-       │            │       Amazon SNS
-       │            │            │
-       │            │            ▼
-       │            │       Email Alert
-       │            │
-       └────────────┴────────────┐
-                                 ▼
-                    CloudWatch Dashboard
+    ┌──────────────────────┐
+    │        User          │
+    │     Web Browser      │
+    └──────────┬───────────┘
+               │
+               │ HTTP Request
+               ▼
+    ┌──────────────────────┐
+    │    Frontend Tier     │
+    │    Nginx Container   │
+    │      Port 80         │
+    └──────────┬───────────┘
+               │
+               │ /api/tasks
+               ▼
+    ┌──────────────────────┐
+    │     Backend Tier     │
+    │   Node.js / Express  │
+    │      Port 5000       │
+    └──────────┬───────────┘
+               │
+               │ MongoDB Connection
+               ▼
+    ┌──────────────────────┐
+    │    Database Tier     │
+    │   MongoDB Container  │
+    │      Port 27017      │
+    └──────────────────────┘
+
+### Frontend Tier
+
+- Nginx serves the web application.
+- Runs on port `80`.
+- Handles user requests and forwards API requests to the backend.
+
+### Backend Tier
+
+- Built using Node.js and Express.
+- Runs on port `5000`.
+- Provides REST API endpoints for task operations.
+- Communicates with MongoDB for data storage.
+
+### Database Tier
+
+- Uses MongoDB for storing application data.
+- Runs on port `27017`.
+- Stores and retrieves To-Do task information.
+
+### Communication Flow
+
+    User → Frontend (Nginx) → Backend (Node.js/Express) → MongoDB
+
+The three tiers are deployed as separate containers using Amazon ECS Fargate.
+
+---
+
+## ☁️ AWS Monitoring Architecture
+
+The deployed application is monitored using Amazon CloudWatch.
+
+    ┌──────────────────────────────┐
+    │        ECS Fargate          │
+    │       Three-Tier App        │
+    └──────────────┬───────────────┘
+                   │
+         ┌─────────┼─────────┐
+         │         │         │
+         ▼         ▼         ▼
+    ECS Metrics  CloudWatch  CloudWatch
+                 Logs        Alarms
+                              │
+                              ▼
+                         Amazon SNS
+                              │
+                              ▼
+                        Email Alert
+
+         CloudWatch Dashboard
+                  ▲
+                  │
+        Metrics + Alarms + Logs
+
+### Monitoring Flow
+
+    ECS Services
+         ↓
+    CloudWatch Metrics
+         ↓
+    CloudWatch Dashboard
+         ↓
+    CloudWatch Alarms
+         ↓
+    Amazon SNS
+         ↓
+    Email Notification
+
+Backend application logs follow a separate path:
+
+    ECS Backend Container
+         ↓
+    CloudWatch Logs
+         ↓
+    /ecs/three-tier-backend
+         ↓
+    Dashboard Log Widget
 
 ---
 
@@ -210,13 +269,13 @@ An email subscription was configured and confirmed successfully.
 ### Alert Flow
 
     ECS CPU Metric
-          ↓
+         ↓
     CloudWatch Alarm
-          ↓
+         ↓
       CPU > 70%
-          ↓
+         ↓
       Amazon SNS
-          ↓
+         ↓
       Email Alert
 
 ---
@@ -239,7 +298,7 @@ Backend container logs are configured using the AWS `awslogs` log driver.
 
 The logs include application startup and database connection information.
 
-Example log messages:
+### Example Log Messages
 
     Backend API running on port 5000
     Connected to MongoDB successfully!
